@@ -2,12 +2,21 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl3.h>
 
+#include <glad/glad.h>
+
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_opengl.h>
+#include <SDL3/SDL_timer.h>
 
 #include <fmt/core.h>
 
 #include <glm/glm.hpp>
+
+#include "SystemSimulation.h"
+
+constexpr uint32_t WIDTH{ 1920 };
+constexpr uint32_t HEIGHT{ 1080 };
+
+Simulation simulation{ WIDTH, HEIGHT };
 
 int main(int, char**) {
 	// setup SDL
@@ -27,7 +36,7 @@ int main(int, char**) {
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	uint32_t windowFlags{ SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN };
-	SDL_Window* window{ SDL_CreateWindow("glTetris", 1920, 1080, windowFlags) };
+	SDL_Window* window{ SDL_CreateWindow("glSolarSystem", WIDTH, HEIGHT, windowFlags) };
 	if (window == nullptr) {
 		fmt::println("Error: SDL_CreateWindow(): {}", SDL_GetError());
 		return -1;
@@ -37,6 +46,12 @@ int main(int, char**) {
 	SDL_GL_MakeCurrent(window, glContext);
 	SDL_GL_SetSwapInterval(1);	// enable vsync
 	SDL_ShowWindow(window);
+	SDL_SetWindowRelativeMouseMode(window, true);
+
+	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+		fmt::println("Failed to initialise GLAD");
+		return -1;
+	}
 
 	// setup dear imgui context
 	IMGUI_CHECKVERSION();
@@ -53,16 +68,32 @@ int main(int, char**) {
 	ImGui_ImplOpenGL3_Init(glslVersion);
 
 	// imgui state
-	bool showDemoWindow{ true };
-	bool showAnotherWindow{ false };
-	glm::vec4 clearColour{ 0.45f, 0.55f, 0.6f, 1.0f };
+	glm::vec4 clearColour{ 0.0f, 0.0f, 0.0f, 1.0f };
 
 	// main loop
+	simulation.init();
 	bool done{ false };
 
+	float deltaTime{};
+	float lastFrame{};
+
 	while (!done) {
+		glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
+
+		float currentFrame{ static_cast<float>(SDL_GetTicks()) };
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		SDL_Event event{};
 		while (SDL_PollEvent(&event)) {
+
+			if (event.type == SDL_EVENT_MOUSE_MOTION) {
+				float xOffset{ event.motion.xrel };
+				float yOffset{ -event.motion.yrel };
+
+				simulation.processMouse(xOffset, yOffset);
+			}
+
 			ImGui_ImplSDL3_ProcessEvent(&event);
 			if (event.type == SDL_EVENT_QUIT)
 				done = true;
@@ -70,53 +101,34 @@ int main(int, char**) {
 				done = true;
 		}
 
+		simulation.processKey(deltaTime);
+		simulation.update(deltaTime);
+
 		// start the dear imgui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 
-		// 1. show the big demo window
-		if (showDemoWindow)
-			ImGui::ShowDemoWindow(&showDemoWindow);
-
-		// 2. show a simple window othat we create ourselves
-		// we use a begin/end pair to create a named window
 		{
 			static float f{ 0.0f };
 			static int counter{ 0 };
 
-			ImGui::Begin("Hello, world!");								// Create a window called "Hello, world!" and append to it
+			ImGui::Begin("Debug Window");
 
-			ImGui::Text("This is some useful text.");					// Display some text (you can use a format string too)
-			ImGui::Checkbox("Demo Window", &showDemoWindow);			// Edit bools storing our window open.close state
-			ImGui::Checkbox("Another Window", &showAnotherWindow);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);				// Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear colour", (float*)&clearColour);	// Edit 3 floats representing a colour
-
-			if (ImGui::Button("Button"))								// Buttons return true when clicked (most widgets return truen when edited/activated)
-				++counter;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
+			ImGui::ColorEdit3("clear colour", reinterpret_cast<float*>(&clearColour));
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			ImGui::End();
 		}
 
-		// 3. show another simple window
-		if (showAnotherWindow) {
-			ImGui::Begin("Another Window", &showAnotherWindow);			// Pass a pointer to our bool variable (the window will have a closing button that will clear the bool)
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				showAnotherWindow = false;
-			ImGui::End();
-		}
-
 		// rendering
 		ImGui::Render();
-		glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
-		glClearColor(clearColour.x* clearColour.w, clearColour.y* clearColour.w, clearColour.z* clearColour.w, clearColour.w);
-		glClear(GL_COLOR_BUFFER_BIT);
+
+		glClearColor(clearColour.x * clearColour.w, clearColour.y * clearColour.w, clearColour.z * clearColour.w, clearColour.w);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		simulation.render();
+
+
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		SDL_GL_SwapWindow(window);
 	}

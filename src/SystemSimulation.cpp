@@ -1,8 +1,9 @@
 #include "SystemSimulation.h"
 #include "Sphere.h"
 #include "ShaderLocator.h"
+#include "TextureLocator.h"
 
-Sphere *sphere;
+Sphere *sun;
 
 void Simulation::init() {
 	glEnable(GL_BLEND);
@@ -16,6 +17,7 @@ void Simulation::init() {
 	glPolygonMode(GL_FRONT, GL_FILL);
 
 	ShaderLocator::getShaderManager().loadShader("../shaders/lighting.vert", "../shaders/lighting.frag", "sphere");
+	TextureLocator::getTextureManager().loadTexture("../textures/2k_sun.jpg", false, "sun");
 
 	glm::mat4 projection{
 		glm::perspective(
@@ -28,7 +30,11 @@ void Simulation::init() {
 
 	ShaderLocator::getShaderManager().getShader("sphere").use().setMat4("projection", projection);
 
-	sphere = new Sphere(m_camera, ShaderLocator::getShaderManager().getShader("sphere"));
+	sun = new Sphere(
+		m_camera, 
+		ShaderLocator::getShaderManager().getShader("sphere"),
+		TextureLocator::getTextureManager().getTexture("sun")
+	);
 
 }
 
@@ -67,6 +73,6 @@ void Simulation::update(float) {}
 
 void Simulation::render() {
 
-	sphere->draw(glm::vec3{ 0.0f, 0.0f, -5.0f }, 1.0f);
+	sun->draw(glm::vec3{ 0.0f, 0.0f, -5.0f }, 1.0f);
 
 }

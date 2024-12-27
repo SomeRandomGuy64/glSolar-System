@@ -72,6 +72,15 @@ add_executable(glSolarSystem
     src/LoggedShaderManager.h
     src/Sphere.cpp
     src/Sphere.h
+    src/ITextureManager.h
+    src/TextureManager.h
+    src/TextureManager.cpp
+    src/LoggedTextureManager.h
+    src/LoggedTextureManager.cpp
+    src/TextureLocator.h
+    src/TextureLocator.cpp
+    src/Texture.h
+    src/Texture.cpp
     ${SHADER_FILES}  # Add shader files to the main target so they show up in VS
 )
 

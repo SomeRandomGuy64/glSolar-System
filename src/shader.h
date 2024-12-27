@@ -17,7 +17,7 @@ public:
 	void compile(const char* vertexSource, const char* fragmantSource);
 
 	void setFloat(const char* name, float value, bool useShader = false);
-	void setInteger(const char* name, int value, bool useShader = false);
+	void setInt(const char* name, int value, bool useShader = false);
 	void setVec2f(const char* name, float x, float y, bool useShader = false);
 	void setVec2f(const char* name, const glm::vec2& value, bool useShader = false);
 	void setVec3f(const char* name, float x, float y, float z, bool useShader = false);

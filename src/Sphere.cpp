@@ -1,14 +1,16 @@
 #include "Sphere.h"
 #include "ShaderLocator.h"
+#include "TextureLocator.h"
 
 #include <glad/glad.h>
 #include <glm/gtc/constants.hpp>
 
 #include <vector>
 
-Sphere::Sphere(Camera& camera, Shader& shader)
+Sphere::Sphere(Camera& camera, Shader& shader, Texture& texture)
 	: m_camera(camera)
 	, m_shader(shader)
+	, m_texture(texture)
 {
 	m_initData();
 }
@@ -17,11 +19,25 @@ void Sphere::draw(glm::vec3 position, float radius) {
 	m_shader.use();
 
 	ShaderLocator::getShaderManager().getShader("sphere").use().setMat4("view", m_camera.getViewMatrix());
+	ShaderLocator::getShaderManager().getShader("sphere").use().setInt("material.diffuse", 0);
+	ShaderLocator::getShaderManager().getShader("sphere").use().setInt("material.specular", 0);
+	ShaderLocator::getShaderManager().getShader("sphere").use().setInt("material.emission", 0);
+	ShaderLocator::getShaderManager().getShader("sphere").use().setFloat("material.shininess", 256.0f);
+	ShaderLocator::getShaderManager().getShader("sphere").use().setVec3f("pointLight.position", glm::vec3{ 0.0f, 0.0f, -5.0f });
+	ShaderLocator::getShaderManager().getShader("sphere").use().setFloat("pointLight.constant", 1.0f);
+	ShaderLocator::getShaderManager().getShader("sphere").use().setFloat("pointLight.linear", 0.001f);
+	ShaderLocator::getShaderManager().getShader("sphere").use().setFloat("pointLight.quadratic", 0.000001f);
+	ShaderLocator::getShaderManager().getShader("sphere").use().setVec3f("pointLight.ambient", glm::vec3{ 0.1f, 0.1f, 0.1f });
+	ShaderLocator::getShaderManager().getShader("sphere").use().setVec3f("pointLight.diffuse", glm::vec3{ 0.8f, 0.8f, 0.8f });
+	ShaderLocator::getShaderManager().getShader("sphere").use().setVec3f("pointLight.specular", glm::vec3{ 1.0f, 0.0f, 0.0f });
 
 	glm::mat4 modelMatrix{ 1.0f };
 	modelMatrix = glm::translate(modelMatrix, position);
 	modelMatrix = glm::scale(modelMatrix, glm::vec3{ radius });
 	ShaderLocator::getShaderManager().getShader("sphere").use().setMat4("model", modelMatrix);
+
+	glActiveTexture(GL_TEXTURE0);
+	TextureLocator::getTextureManager().getTexture("sun").bind();
 
 	glBindVertexArray(m_vao);
 	glDrawElements(GL_TRIANGLE_STRIP, m_indexCount, GL_UNSIGNED_INT, 0);
@@ -34,6 +50,7 @@ void Sphere::m_initData() {
 
 		std::vector<glm::vec3> positions{};
 		std::vector<glm::vec3> normals{};
+		std::vector<glm::vec2> uv{};
 		std::vector<unsigned int> indicies{};
 
 		const unsigned int X_SEGMENTS{ m_segments };
@@ -50,6 +67,7 @@ void Sphere::m_initData() {
 
 				positions.push_back(glm::vec3{ xPos, yPos, zPos });
 				normals.push_back(glm::vec3{ xPos, yPos, zPos });
+				uv.push_back(glm::vec2{ xSegment, ySegment });
 			}
 		}
 
@@ -82,6 +100,10 @@ void Sphere::m_initData() {
 				data.push_back(normals.at(i).y);
 				data.push_back(normals.at(i).z);
 			}
+			if (uv.size() > 0) {
+				data.push_back(uv.at(i).x);
+				data.push_back(uv.at(i).y);
+			}
 		}
 
 		unsigned int vbo{};
@@ -97,12 +119,15 @@ void Sphere::m_initData() {
 
 		unsigned int positionsVectorSize{ 3 };
 		unsigned int normalsVectorSize{ 3 };
-		unsigned int stride{ (positionsVectorSize + normalsVectorSize) * sizeof(float) };
+		unsigned int uvVectorSize{ 2 };
+		unsigned int stride{ (positionsVectorSize + normalsVectorSize + uvVectorSize) * sizeof(float) };
 
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
 
 		glBindVertexArray(0);
 	}

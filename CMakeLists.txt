@@ -57,7 +57,21 @@ source_group("Shaders" FILES ${SHADER_FILES})
 add_executable(glSolarSystem
     src/main.cpp
     src/glad.c
+    src/SystemSimulation.cpp
+    src/SystemSimulation.h
+    src/Shader.cpp
     src/shader.h
+    src/Camera.cpp
+    src/Camera.h
+    src/ShaderLocator.cpp
+    src/ShaderLocator.h
+    src/IShaderManager.h
+    src/ShaderManager.cpp
+    src/ShaderManager.h
+    src/LoggedShaderManager.cpp
+    src/LoggedShaderManager.h
+    src/Sphere.cpp
+    src/Sphere.h
     ${SHADER_FILES}  # Add shader files to the main target so they show up in VS
 )
 
